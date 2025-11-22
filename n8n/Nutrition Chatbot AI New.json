@@ -1,0 +1,275 @@
+{
+  "name": "Nutrition Chatbot AI New",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "95bd289b-6522-4c1e-9a2b-68aec385476c",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "800a42ef-f2bd-47a0-a41f-32d44132f682",
+      "name": "Webhook",
+      "webhookId": "95bd289b-6522-4c1e-9a2b-68aec385476c"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5000/predict",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"age\": {{ $json.body.age }},\n  \"sex\": \"{{ $json.body.sex }}\",\n  \"height\": {{ $json.body.height }},\n  \"weight\": {{ $json.body.weight }},\n  \"fbs\": {{ $json.body.fbs }},\n  \"hdl\": {{ $json.body.hdl }},\n  \"ldl\": {{ $json.body.ldl }},\n  \"tg\": {{ $json.body.tg }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        208,
+        80
+      ],
+      "id": "35f291b7-11b2-4cd3-a954-5551809a4d27",
+      "name": "ML Predict Risk"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "   You are an expert nutritionist and health coach. Generate personalized meal plans based on user health data. Make meals diverse, delicious, and practical.\n",
+              "role": "system"
+            },
+            {
+              "content": "=You are an expert nutritionist and health coach. Generate a detailed, personalized meal plan based on the following data:\n\n**User Profile:**\n- Age: {{ $('Webhook').item.json.body.age }} years\n- Sex: {{ $('Webhook').item.json.body.sex }}\n- Height: {{ $('Webhook').item.json.body.height }}cm\n- Weight: {{ $('Webhook').item.json.body.weight }}kg\n- BMI: {{ $('ML Predict Risk').item.json.bmi.toFixed(1) }}\n- Activity Level: {{ $('Webhook').item.json.body.activity_level }}\n- Goal: {{ $('Webhook').item.json.body.goal }}\n\n**Health Metrics:**\n- Glycemic Risk Score: {{ $('ML Predict Risk').item.json.risk_score.toFixed(1) }}% {{ $('ML Predict Risk').item.json.risk_score > 50 ? '🔴 HIGH RISK' : $('ML Predict Risk').item.json.risk_score > 30 ? '🟡 MODERATE RISK' : '🟢 LOW RISK' }}\n- Fasting Blood Sugar: {{ $('ML Predict Risk').item.json.lab_values.fbs }}mg/dL {{ $('ML Predict Risk').item.json.lab_values.fbs >= 126 ? '🔴 DIABETIC RANGE' : $('ML Predict Risk').item.json.lab_values.fbs >= 100 ? '🟡 PRE-DIABETIC' : '🟢 NORMAL' }}\n- HDL Cholesterol: {{ $('ML Predict Risk').item.json.lab_values.hdl }}mg/dL {{ $('ML Predict Risk').item.json.lab_values.hdl < 40 ? '🔴 LOW' : '🟢 GOOD' }}\n- LDL Cholesterol: {{ $('ML Predict Risk').item.json.lab_values.ldl }}mg/dL {{ $('ML Predict Risk').item.json.lab_values.ldl >= 160 ? '🔴 HIGH' : $('ML Predict Risk').item.json.lab_values.ldl >= 130 ? '🟡 BORDERLINE' : '🟢 OPTIMAL' }}\n- Triglycerides: {{ $('ML Predict Risk').item.json.lab_values.tg }}mg/dL {{ $('ML Predict Risk').item.json.lab_values.tg >= 200 ? '🔴 HIGH' : $('ML Predict Risk').item.json.lab_values.tg >= 150 ? '🟡 BORDERLINE' : '🟢 NORMAL' }}\n\n**Top Risk Factors:**\n{{ $('ML Predict Risk').item.json.feature_importance.slice(0, 3).map(f => `- ${f.name}: ${f.value} (${f.direction === 'increases' ? '⬆️ increases' : f.direction === 'protective' ? '⬇️ protective' : '➡️'} risk)`).join('\\n') }}\n\n**Recommended Interventions:**\n{{ $('ML Predict Risk').item.json.counterfactuals.slice(0, 3).map(c => `- ${c.change}\\n  Method: ${c.method}\\n  Impact: ${c.impact}`).join('\\n\\n') }}\n\n**Daily Nutrition Targets:**\n- Total Calories: {{ $('ML Calculate Calories').item.json.calories }} kcal\n- Protein: {{ $('ML Calculate Calories').item.json.macros.protein }}g ({{ (($('ML Calculate Calories').item.json.macros.protein * 4) / $('ML Calculate Calories').item.json.calories * 100).toFixed(0) }}%)\n- Carbohydrates: {{ $('ML Calculate Calories').item.json.macros.carbs }}g ({{ (($('ML Calculate Calories').item.json.macros.carbs * 4) / $('ML Calculate Calories').item.json.calories * 100).toFixed(0) }}%)\n- Fat: {{ $('ML Calculate Calories').item.json.macros.fat }}g ({{ (($('ML Calculate Calories').item.json.macros.fat * 9) / $('ML Calculate Calories').item.json.calories * 100).toFixed(0) }}%)\n\n{{ $('Webhook').item.json.body.allergens || $('Webhook').item.json.body.dietary_preference ? '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n🚨 CRITICAL DIETARY RESTRICTIONS (MUST FOLLOW)\\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' : '' }}\n{{ $('Webhook').item.json.body.dietary_preference ? `🥗 Dietary Preference: ${$('Webhook').item.json.body.dietary_preference.toUpperCase()}\\n` : '' }}\n{{ $('Webhook').item.json.body.allergens ? `⚠️ FOOD ALLERGIES/INTOLERANCES: ${$('Webhook').item.json.body.allergens.toUpperCase()}\\n` : '' }}\n{{ $('Webhook').item.json.body.allergens || $('Webhook').item.json.body.dietary_preference ? '\\n🚨 MANDATORY RULES:\\n✓ NEVER suggest foods containing listed allergens\\n✓ ALWAYS follow the specified dietary preference\\n✓ Provide safe alternatives when necessary\\n✓ Double-check all ingredients before suggesting meals\\n✓ If suggesting a packaged food, warn about checking labels\\n✓ Acknowledge restrictions in your response\\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n' : '' }}\n\n**User's Question/Request:**\n{{ $('Webhook').item.json.body.message }}\n\n---\n\n**Instructions:**\nCreate a complete daily meal plan with 3 meals (Breakfast, Lunch, Dinner) that:\n\n1. **Meets the calorie and macro targets** (distribute as: Breakfast 30%, Lunch 35%, Dinner 35%)\n\n2. **Addresses their specific health concerns:**\n   - If blood sugar elevated (FBS ≥100): Focus on LOW-GI foods, high fiber, avoid refined carbs\n   - If triglycerides high (≥150): Emphasize omega-3 fatty fish, reduce simple sugars\n   - If LDL high (≥130): Include soluble fiber (oats, beans), plant sterols, healthy fats\n   - If HDL low (<40): Recommend cardio exercise, include nuts, olive oil, avocado\n\n3. **STRICTLY respects dietary restrictions:**\n   - {{ $('Webhook').item.json.body.allergens ? `EXCLUDE completely: ${$('Webhook').item.json.body.allergens}` : 'No allergens to avoid' }}\n   - {{ $('Webhook').item.json.body.dietary_preference ? `MUST be ${$('Webhook').item.json.body.dietary_preference} compliant` : 'No specific dietary preference' }}\n\n4. **Is practical, delicious, and culturally appropriate**\n   - Use common, accessible ingredients\n   - Provide realistic portion sizes\n   - Consider meal prep convenience\n\n5. **Includes specific details:**\n   - Exact portions (grams, cups, pieces)\n   - Approximate calorie and macro breakdown per meal\n   - Brief health benefits related to their condition\n\n**Response Format:**\nUse clear markdown with:\n- Meal name as header (### Breakfast / ### Lunch / ### Dinner)\n- List of ingredients with exact portions\n- **Nutritional Info:** Calories, Protein, Carbs, Fat per meal\n- **Health Benefits:** Why this meal helps their condition\n- **Prep Note:** Quick preparation tips (optional)\n- {{ $('Webhook').item.json.body.allergens || $('Webhook').item.json.body.dietary_preference ? '**Allergen Check:** Confirmation that meal respects restrictions' : '' }}\n\n**Tone:**\n- Be encouraging and supportive\n- Explain health concepts in simple language\n- Reference their specific health data when relevant\n- Acknowledge their restrictions naturally\n- End with motivation and next steps\n\nBegin your response now:"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        752,
+        -32
+      ],
+      "id": "4463d3aa-fa45-44d3-94a9-7e157ec15a0a",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "OEbjvEoXrUvjpNTd",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "673fdff5-9fce-4a55-9679-b895de42c5e7",
+              "name": "risk_data",
+              "value": "=={{ $('ML Predict Risk').first().json }}",
+              "type": "string"
+            },
+            {
+              "id": "f131e696-51d5-4730-b3aa-3b37c0799150",
+              "name": "calorie_data",
+              "value": "=={{ $('ML Calculate Calories').first().json }}",
+              "type": "string"
+            },
+            {
+              "id": "492d5405-2766-4c05-9933-0f813ab4d183",
+              "name": "user_message",
+              "value": "=={{ $('Webhook').first().json.body.message || 'Suggest healthy meals' }}",
+              "type": "string"
+            },
+            {
+              "id": "73165b14-f2f0-49fa-9760-b4dcfa19cd13",
+              "name": "conversation_id",
+              "value": "=={{ $('Webhook').first().json.body.conversation_id || $now.toString() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        576,
+        -32
+      ],
+      "id": "be7f2fbd-448b-4847-b3cf-2e46520c87a5",
+      "name": "Merge Data"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1216,
+        -32
+      ],
+      "id": "bdd13f4b-74fe-45f9-849e-21ce19f40db9",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5000/calculate-calories",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"age\": {{ $json.body.age }},\n  \"sex\": \"{{ $json.body.sex }}\",\n  \"height\": {{ $json.body.height }},\n  \"weight\": {{ $json.body.weight }},\n  \"activity_level\": \"{{ $json.body.activity_level }}\",\n  \"goal\": \"{{ $json.body.goal }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        208,
+        -112
+      ],
+      "id": "ce3d2a30-447b-4643-8133-4361da7d10a7",
+      "name": "ML Calculate Calories"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        400,
+        -16
+      ],
+      "id": "5720af8e-d67d-4fde-be65-3148ed2cddc9",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get data from previous nodes\nconst aiResponse = $('Message a model').first().json.message.content;\nconst mlPredict = $('ML Predict Risk').first().json;\nconst mlCalories = $('ML Calculate Calories').first().json;\nconst webhook = $('Webhook').first().json.body;\n\n// ================================================================\n// EXTRACT CONVERSATION ID\n// ================================================================\nconst conversationId = webhook.conversation_id || `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;\n\n// ================================================================\n// EXTRACT RISK DATA (IMPROVED API)\n// ================================================================\nconst riskScore = mlPredict.risk_score !== undefined ? mlPredict.risk_score : 0;\nconst bmi = mlPredict.bmi !== undefined ? mlPredict.bmi : 0;\n\n// NEW: Extract risk classification\nconst riskClass = mlPredict.risk_class !== undefined ? mlPredict.risk_class : 0;\nconst riskLevel = mlPredict.risk_level || (riskScore > 50 ? 'HIGH' : riskScore > 30 ? 'MODERATE' : 'LOW');\nconst riskMessage = mlPredict.risk_message || '';\nconst confidence = mlPredict.confidence || 0;\nconst optimalThreshold = mlPredict.optimal_threshold_used || 0.5;\n\n// NEW: Extract BMI category\nconst bmiCategory = mlPredict.bmi_category || {\n  category: bmi >= 30 ? 'Obese' : bmi >= 25 ? 'Overweight' : bmi >= 18.5 ? 'Normal' : 'Underweight',\n  range: bmi >= 30 ? '≥30' : bmi >= 25 ? '25-29.9' : bmi >= 18.5 ? '18.5-24.9' : '<18.5',\n  color: bmi >= 30 ? 'red' : bmi >= 25 ? 'yellow' : 'green'\n};\n\n// NEW: Extract metabolic syndrome indicators\nconst metabolicSyndromeIndicators = mlPredict.metabolic_syndrome_indicators || {\n  count: 0,\n  total: 4,\n  indicators: [],\n  risk_level: 'Low'\n};\n\n// Extract feature_importance (CRITICAL!)\nconst featureImportance = mlPredict.feature_importance || [];\n\n// NEW: Extract recommendations (PRIORITY-RANKED!)\nconst recommendations = mlPredict.recommendations || [];\n\n// Extract counterfactuals (ENHANCED WITH TIMELINES!)\nconst counterfactuals = mlPredict.counterfactuals || [];\n\n// NEW: Extract data quality assessment\nconst dataQuality = mlPredict.data_quality || {\n  score: 100,\n  level: 'EXCELLENT',\n  message: 'All values provided',\n  unknown_count: 0,\n  issues: []\n};\n\n// Extract lab values (ENHANCED WITH RATIOS!)\nconst labValues = mlPredict.lab_values || {\n  fbs: webhook.fbs || 0,\n  hdl: webhook.hdl || 0,\n  ldl: webhook.ldl || 0,\n  tg: webhook.tg || 0,\n  tg_hdl_ratio: 0,\n  ldl_hdl_ratio: 0\n};\n\n// NEW: Model version tracking\nconst modelVersion = mlPredict.model_version || 'original_v1';\n\n// ================================================================\n// EXTRACT CALORIE DATA\n// ================================================================\nconst dailyCalories = mlCalories.calories !== undefined ? mlCalories.calories : 0;\nconst bmr = mlCalories.bmr || 0;\nconst tdee = mlCalories.tdee || 0;\nconst targetCalories = mlCalories.target_calories || dailyCalories;\n\n// Extract macros with proper error handling\nconst macros = {\n  protein: mlCalories.macros?.protein?.grams || mlCalories.macros?.protein || 0,\n  carbs: mlCalories.macros?.carbs?.grams || mlCalories.macros?.carbs || 0,\n  fat: mlCalories.macros?.fat?.grams || mlCalories.macros?.fat || 0\n};\n\n// NEW: Extract meal timing if available\nconst mealTiming = mlCalories.meal_timing || {\n  breakfast: Math.round(targetCalories * 0.25),\n  lunch: Math.round(targetCalories * 0.35),\n  dinner: Math.round(targetCalories * 0.30),\n  snacks: Math.round(targetCalories * 0.10)\n};\n\n// ================================================================\n// EXTRACT USER PROFILE DATA\n// ================================================================\nconst userProfile = {\n  age: webhook.age || 0,\n  sex: webhook.sex || \"Unknown\",\n  height: webhook.height || 0,\n  weight: webhook.weight || 0,\n  activity_level: webhook.activity_level || \"Moderately Active\",\n  goal: webhook.goal || \"maintain weight\"\n};\n\n// ================================================================\n// EXTRACT DIETARY RESTRICTIONS\n// ================================================================\nconst allergens = webhook.allergens ? webhook.allergens.trim() : \"\";\nconst dietaryPreference = webhook.dietary_preference || \"\";\n\n// ================================================================\n// CREATE COMPLETE RESPONSE OBJECT (ENHANCED!)\n// ================================================================\nconst response = {\n  // Conversation tracking\n  conversation_id: conversationId,\n  \n  // ENHANCED: Health metrics with new fields\n  risk_score: riskScore,\n  risk_class: riskClass,\n  risk_level: riskLevel,\n  risk_message: riskMessage,\n  confidence: confidence,\n  optimal_threshold_used: optimalThreshold,\n  bmi: bmi,\n  bmi_category: bmiCategory,\n  \n  // NEW: Metabolic health\n  metabolic_syndrome_indicators: metabolicSyndromeIndicators,\n  \n  // ENHANCED: Nutrition data\n  daily_calories: dailyCalories,\n  target_calories: targetCalories,\n  bmr: bmr,\n  tdee: tdee,\n  macros: macros,\n  meal_timing: mealTiming,\n  \n  // ENHANCED: Lab values with ratios\n  lab_values: labValues,\n  \n  // ENHANCED: Explainable AI features\n  feature_importance: featureImportance,\n  \n  // NEW: Personalized recommendations (priority-ranked!)\n  recommendations: recommendations,\n  \n  // ENHANCED: Counterfactuals with timelines\n  counterfactuals: counterfactuals,\n  \n  // NEW: Data quality assessment\n  data_quality: dataQuality,\n  \n  // User profile (for frontend display/tracking)\n  user_profile: userProfile,\n  \n  // Dietary restrictions\n  allergens: allergens,\n  dietary_preference: dietaryPreference,\n  \n  // AI response\n  ai_response: aiResponse,\n  \n  // NEW: Model tracking\n  model_version: modelVersion,\n  \n  // Metadata\n  timestamp: new Date().toISOString()\n};\n\n// ================================================================\n// DEBUGGING LOGS (visible in n8n execution logs)\n// ================================================================\nconsole.log(\"════════════════════════════════════════════════════════════\");\nconsole.log(\"📦 ENHANCED RESPONSE OBJECT CREATED\");\nconsole.log(\"════════════════════════════════════════════════════════════\");\nconsole.log(\"Conversation ID:\", conversationId);\nconsole.log(\"Model Version:\", modelVersion);\nconsole.log(\"\");\nconsole.log(\"🎯 RISK ASSESSMENT:\");\nconsole.log(\"  Risk Score:\", riskScore + \"%\");\nconsole.log(\"  Risk Level:\", riskLevel);\nconsole.log(\"  Risk Class:\", riskClass);\nconsole.log(\"  Confidence:\", confidence + \"%\");\nconsole.log(\"\");\nconsole.log(\"📊 BODY METRICS:\");\nconsole.log(\"  BMI:\", bmi);\nconsole.log(\"  BMI Category:\", bmiCategory.category);\nconsole.log(\"\");\nconsole.log(\"⚕️ METABOLIC SYNDROME:\");\nconsole.log(\"  Indicators:\", metabolicSyndromeIndicators.count + \"/\" + metabolicSyndromeIndicators.total);\nconsole.log(\"  Risk Level:\", metabolicSyndromeIndicators.risk_level);\nconsole.log(\"\");\nconsole.log(\"🍽️ NUTRITION:\");\nconsole.log(\"  Daily Calories:\", dailyCalories, \"kcal\");\nconsole.log(\"  Target Calories:\", targetCalories, \"kcal\");\nconsole.log(\"  Macros:\", macros);\nconsole.log(\"\");\nconsole.log(\"🧪 LAB VALUES:\");\nconsole.log(\"  FBS:\", labValues.fbs, \"mg/dL\");\nconsole.log(\"  HDL:\", labValues.hdl, \"mg/dL\");\nconsole.log(\"  LDL:\", labValues.ldl, \"mg/dL\");\nconsole.log(\"  TG:\", labValues.tg, \"mg/dL\");\nconsole.log(\"  TG/HDL Ratio:\", labValues.tg_hdl_ratio);\nconsole.log(\"  LDL/HDL Ratio:\", labValues.ldl_hdl_ratio);\nconsole.log(\"\");\nconsole.log(\"📈 EXPLAINABILITY:\");\nconsole.log(\"  Feature Importance Items:\", featureImportance.length);\nconsole.log(\"  Recommendations:\", recommendations.length);\nconsole.log(\"  Counterfactuals:\", counterfactuals.length);\nconsole.log(\"\");\nconsole.log(\"📊 DATA QUALITY:\");\nconsole.log(\"  Level:\", dataQuality.level);\nconsole.log(\"  Score:\", dataQuality.score);\nconsole.log(\"  Unknown Values:\", dataQuality.unknown_count);\nconsole.log(\"\");\nconsole.log(\"🚫 DIETARY RESTRICTIONS:\");\nconsole.log(\"  Allergens:\", allergens || \"None\");\nconsole.log(\"  Preference:\", dietaryPreference || \"None\");\nconsole.log(\"\");\nconsole.log(\"💬 AI RESPONSE:\");\nconsole.log(\"  Length:\", aiResponse.length, \"characters\");\nconsole.log(\"════════════════════════════════════════════════════════════\");\n\n// ================================================================\n// VALIDATION & WARNINGS\n// ================================================================\nif (featureImportance.length === 0) {\n  console.warn(\"⚠️ WARNING: feature_importance array is empty!\");\n}\n\nif (recommendations.length === 0) {\n  console.warn(\"⚠️ WARNING: recommendations array is empty! (May be using old API)\");\n}\n\nif (counterfactuals.length === 0) {\n  console.warn(\"⚠️ WARNING: counterfactuals array is empty!\");\n}\n\nif (riskScore === 0 && bmi === 0) {\n  console.warn(\"⚠️ WARNING: Risk score and BMI are both 0 - check ML Predict Risk node!\");\n}\n\nif (dailyCalories === 0) {\n  console.warn(\"⚠️ WARNING: Daily calories is 0 - check ML Calculate Calories node!\");\n}\n\nif (modelVersion === 'original_v1') {\n  console.log(\"ℹ️ INFO: Using original model - new features may not be available\");\n  console.log(\"   Consider switching to improved model for enhanced features\");\n}\n\nif (dataQuality.level === 'FAIR') {\n  console.log(\"⚠️ NOTICE: Data quality is FAIR - some values were estimated\");\n  console.log(\"   Issues:\", dataQuality.issues.join(', '));\n}\n\nconsole.log(\"✅ Response object validated and ready to send!\");\n\n// ================================================================\n// RETURN THE FORMATTED RESPONSE\n// ================================================================\nreturn { json: response };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        -32
+      ],
+      "id": "82e591a5-21f7-421e-a17e-07a2082962f6",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "ML Calculate Calories",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ML Predict Risk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ML Predict Risk": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Data": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ML Calculate Calories": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Merge Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b6744828-6309-4585-bb94-1146699f4022",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0c0bea0968d46a4445a240fac2c8da60a74d2e59023d35fc47a23c9336171213"
+  },
+  "id": "P0GmEUjcZeSEpW9x",
+  "tags": [
+    {
+      "createdAt": "2025-11-03T06:49:35.667Z",
+      "updatedAt": "2025-11-03T06:49:35.667Z",
+      "id": "Os5xzM9cCe8Xj7Ym",
+      "name": "nutrition chatbot"
+    }
+  ]
+}
