@@ -1,0 +1,44 @@
+================================================================================
+NUTRITION ML MODEL - RESULTS
+================================================================================
+
+Dataset: dataset.csv
+Total samples: 1050
+Features: 40
+
+5-Fold CV AUC: 0.8395 (± 0.0613)
+Test Set AUC: 0.7809
+
+Classification Report:
+              precision    recall  f1-score   support
+
+    Low Risk       0.95      0.96      0.95       191
+   High Risk       0.53      0.47      0.50        19
+
+    accuracy                           0.91       210
+   macro avg       0.74      0.72      0.73       210
+weighted avg       0.91      0.91      0.91       210
+
+
+Top 20 Features:
+                 feature  importance
+                  fbs1_4    0.091567
+ metabolic_syndrome_risk    0.082340
+              fbs_normal    0.079457
+               tg_normal    0.055524
+               ageyr14_4    0.054206
+            hdl_low_male    0.048556
+          hdl_protective    0.043691
+                   tg1_4    0.040466
+             bmi_obese_2    0.036952
+metabolic_syndrome_score    0.034880
+                 hdl_low    0.029247
+                height_4    0.028190
+                  kcal_4    0.026441
+   hdl_protective_female    0.026349
+                   BMI_4    0.026345
+                weight_4    0.026256
+                  hdl1_4    0.023298
+                 waist_4    0.022496
+            fbs_diabetes    0.022061
+           tg_borderline    0.021762
